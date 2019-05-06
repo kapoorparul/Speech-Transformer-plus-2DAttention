@@ -108,10 +108,10 @@ class TwoD_Attention_Layer(nn.Module):
 
         self.n = n
         self.c = c
-        self.convq = Conv2dSame(n,c,3)
-        self.convk = Conv2dSame(n,c,3)
-        self.convv = Conv2dSame(n,c,3)
-        self.conv = Conv2dSame(2*c,n,3)
+        self.convq = Conv2d(n,c,3,1)
+        self.convk = Conv2d(n,c,3,1)
+        self.convv = Conv2d(n,c,3,1)
+        self.conv = Conv2d(2*c,n,3,1)
         self.bnq = nn.BatchNorm2d(c)
         self.bnk = nn.BatchNorm2d(c)
         self.bnv = nn.BatchNorm2d(c)
@@ -119,9 +119,9 @@ class TwoD_Attention_Layer(nn.Module):
         self.SA_time = ScaledDotProductAttention(temperature=1., attn_dropout=dropout)
         self.SA_freq = ScaledDotProductAttention(temperature=1., attn_dropout=dropout)
 
-        self.final_conv1 = Conv2dSame(n,c,3)
+        self.final_conv1 = Conv2d(n,c,3)
         self.final_conv1_act = nn.ReLU()
-        self.final_conv2 = Conv2dSame(c,c,3)
+        self.final_conv2 = Conv2d(c,c,3)
         self.bnf1 = nn.BatchNorm2d(c)
         self.bnf2 = nn.BatchNorm2d(c)
         self.act = nn.ReLU()
@@ -217,7 +217,7 @@ class Pre_Net(nn.Module):
         return out
 
 if __name__=='__main__':
-    inputs = torch.randn(16,101,240)
+    inputs = torch.randn(16,100,240)
     prenet = Pre_Net(80,n=3)
     out = prenet(inputs)
     print(out.size())

@@ -19,7 +19,7 @@ LFR_n=1  # Low Frame Rate: number of frames to skip
 # pre_net
 num_M=2
 d_mel=80
-n=64
+n=3
 c=64
 # Encoder
 d_input=80
@@ -181,7 +181,11 @@ if [ ${stage} -le 3 ]; then
         --visdom $visdom \
         --visdom_lr $visdom_lr \
         --visdom_epoch $visdom_epoch \
-        --visdom-id "$visdom_id"
+        --visdom-id "$visdom_id" \
+        --n $n \
+        --c $c \
+        --d_mel $d_mel \
+        --num_M $num_M
 fi
 
 lm_dir=lm
