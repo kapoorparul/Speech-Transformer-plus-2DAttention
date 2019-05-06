@@ -20,18 +20,19 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    # TODO: 改变输入，增加channel维，去掉encoder和decoder第二个block的mask
+
     def forward(self, padded_input, input_lengths, padded_target):
         """
         Args:
-            padded_input: N x Ti x D
+            padded_input: N x Ti x (D_mel*3)
             input_lengths: N
             padded_targets: N x To
         """
-        encoder_padded_outputs, *_ = self.encoder(padded_input, input_lengths)
+        padded_input = self.prenet(padded_input) # N x (Ti/4) x d_model 降维加映射
+        encoder_padded_outputs, *_ = self.encoder(padded_input, None)
         # pred is score before softmax
         pred, gold, *_ = self.decoder(padded_target, encoder_padded_outputs,
-                                      input_lengths)
+                                      None)
         return pred, gold
 
     def recognize(self, input, input_length, char_list, lm_model, args):
@@ -131,3 +132,24 @@ class Transformer(nn.Module):
             package['tr_loss'] = tr_loss
             package['cv_loss'] = cv_loss
         return package
+
+if __name__=='__main__':
+    prenet = Pre_Net(d_mel=80, d_model=512, num_M=2, n=3, c=64, dropout=0.1)
+    encoder = Encoder(d_input=80*1, n_layers=6, n_head=8,
+                      d_k=64, d_v=64, d_model=512, d_inner=1024,
+                      dropout=0.1, pe_maxlen=6000)
+    decoder = Decoder(sos_id=1, eos_id=2, n_tgt_vocab=4233,
+                      d_word_vec=512, n_layers=6, n_head=8,
+                      d_k=64, d_v=64, d_model=512, d_inner=1024,
+                      dropout=0.1,
+                      tgt_emb_prj_weight_sharing=1,
+                      pe_maxlen=6000)
+
+    t = Transformer(prenet,encoder,decoder)
+    padded_input = torch.rand(16,300,240)
+    padded_target = torch.randint(high=4233,size=(16,20))
+    print(padded_target[0][:10])
+    pred, gold = t(padded_input,None,padded_target)
+    print(pred.size())
+    print(gold.size())
+    print(gold[0][-1].item()) # 2 == <eos>

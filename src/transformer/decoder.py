@@ -91,10 +91,10 @@ class Decoder(nn.Module):
                                                      pad_idx=self.eos_id)
         slf_attn_mask = (slf_attn_mask_keypad + slf_attn_mask_subseq).gt(0)
 
-        output_length = ys_in_pad.size(1)
-        dec_enc_attn_mask = get_attn_pad_mask(encoder_padded_outputs,
-                                              encoder_input_lengths,
-                                              output_length)
+        # output_length = ys_in_pad.size(1)
+        # dec_enc_attn_mask = get_attn_pad_mask(encoder_padded_outputs,
+        #                                       encoder_input_lengths,
+        #                                       output_length)
 
         # Forward
         dec_output = self.dropout(self.tgt_word_emb(ys_in_pad) * self.x_logit_scale +
@@ -105,7 +105,7 @@ class Decoder(nn.Module):
                 dec_output, encoder_padded_outputs,
                 non_pad_mask=non_pad_mask,
                 slf_attn_mask=slf_attn_mask,
-                dec_enc_attn_mask=dec_enc_attn_mask)
+                dec_enc_attn_mask=None)
 
             if return_attns:
                 dec_slf_attn_list += [dec_slf_attn]
@@ -249,12 +249,16 @@ class DecoderLayer(nn.Module):
     def forward(self, dec_input, enc_output, non_pad_mask=None, slf_attn_mask=None, dec_enc_attn_mask=None):
         dec_output, dec_slf_attn = self.slf_attn(
             dec_input, dec_input, dec_input, mask=slf_attn_mask)
-        dec_output *= non_pad_mask
+        if non_pad_mask is not None:
+            dec_output *= non_pad_mask
+
         dec_output, dec_enc_attn = self.enc_attn(
             dec_output, enc_output, enc_output, mask=dec_enc_attn_mask)
-        dec_output *= non_pad_mask
+        if non_pad_mask is not None:
+            dec_output *= non_pad_mask
 
         dec_output = self.pos_ffn(dec_output)
-        dec_output *= non_pad_mask
+        if non_pad_mask is not None:
+            dec_output *= non_pad_mask
 
         return dec_output, dec_slf_attn, dec_enc_attn

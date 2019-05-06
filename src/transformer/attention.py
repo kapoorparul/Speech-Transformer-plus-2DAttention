@@ -173,7 +173,7 @@ class TwoD_Attention_Layer(nn.Module):
 
 
 class Pre_Net(nn.Module):
-    def __init__(self,d_mel, d_model=512, num_M=2, n=64, c=64,dropout=0.1):
+    def __init__(self,d_mel, d_model=512, num_M=2, n=3, c=64,dropout=0.1):
         super(Pre_Net, self).__init__()
         self.d_mel = d_mel
         self.num_M = num_M
@@ -195,9 +195,11 @@ class Pre_Net(nn.Module):
 
     def forward(self, inputs):
         '''
-        :param inputs: B*n*T*D
+        :param inputs: N x Ti x (D_mel*3)
         :return: B*T*d_model
         '''
+        B, T, D = inputs.size()
+        inputs = inputs.view(B,T,3,-1).permute(0,2,1,3) #N x 3 x Ti x D_mel
 
         out = self.bn(self.downsample(inputs))
         out = self.bn2(self.downsample2(out))
@@ -208,14 +210,18 @@ class Pre_Net(nn.Module):
 
         B, c, T, D = out.size()
 
-        out = out.permute(0,2,3,1).contiguous().view(B, T, -1) # B*T*(D*c)
+        out = out.permute(0,2,1,3).contiguous().view(B, T, -1) # B*T*(D*c)
 
         out = self.linear(out) # B*T*d_model
 
         return out
 
 if __name__=='__main__':
-    inputs = torch.randn(16,3,100,80)
+    inputs = torch.randn(16,101,240)
     prenet = Pre_Net(80,n=3)
     out = prenet(inputs)
     print(out.size())
+
+    a = torch.randn(1,1,6)
+    print(a)
+    print(a.view(1,1,2,3))

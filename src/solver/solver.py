@@ -40,7 +40,7 @@ class Solver(object):
         self.visdom_id = args.visdom_id
         if self.visdom:
             from visdom import Visdom
-            self.vis = Visdom(env=self.visdom_id)
+            self.vis = Visdom(env=self.visdom_id,port=8099)
             self.vis_opts = dict(title=self.visdom_id,
                                  ylabel='Loss', xlabel='Epoch',
                                  legend=['train loss', 'cv loss'])

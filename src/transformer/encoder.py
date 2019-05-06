@@ -24,7 +24,7 @@ class Encoder(nn.Module):
         self.pe_maxlen = pe_maxlen
 
         # use linear transformation with layer norm to replace input embedding
-        self.linear_in = nn.Linear(d_input, d_model)
+        # self.linear_in = nn.Linear(d_input, d_model)
         self.layer_norm_in = nn.LayerNorm(d_model)
         self.positional_encoding = PositionalEncoding(d_model, max_len=pe_maxlen)
         self.dropout = nn.Dropout(dropout)
@@ -36,7 +36,7 @@ class Encoder(nn.Module):
     def forward(self, padded_input, input_lengths, return_attns=False):
         """
         Args:
-            padded_input: N x T x D
+            padded_input: N x Tinner x D
             input_lengths: N
 
         Returns:
@@ -45,20 +45,20 @@ class Encoder(nn.Module):
         enc_slf_attn_list = []
 
         # Prepare masks
-        non_pad_mask = get_non_pad_mask(padded_input, input_lengths=input_lengths)
-        length = padded_input.size(1)
-        slf_attn_mask = get_attn_pad_mask(padded_input, input_lengths, length)
+        # non_pad_mask = get_non_pad_mask(padded_input, input_lengths=input_lengths)
+        # length = padded_input.size(1)
+        # slf_attn_mask = get_attn_pad_mask(padded_input, input_lengths, length)
 
         # Forward
         enc_output = self.dropout(
-            self.layer_norm_in(self.linear_in(padded_input)) +
+            self.layer_norm_in(padded_input) +
             self.positional_encoding(padded_input))
 
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
                 enc_output,
-                non_pad_mask=non_pad_mask,
-                slf_attn_mask=slf_attn_mask)
+                non_pad_mask=None,
+                slf_attn_mask=None)
             if return_attns:
                 enc_slf_attn_list += [enc_slf_attn]
 
@@ -83,9 +83,11 @@ class EncoderLayer(nn.Module):
     def forward(self, enc_input, non_pad_mask=None, slf_attn_mask=None):
         enc_output, enc_slf_attn = self.slf_attn(
             enc_input, enc_input, enc_input, mask=slf_attn_mask)
-        enc_output *= non_pad_mask
+        if non_pad_mask is not None:
+            enc_output *= non_pad_mask
 
         enc_output = self.pos_ffn(enc_output)
-        enc_output *= non_pad_mask
+        if non_pad_mask is not None:
+            enc_output *= non_pad_mask
 
         return enc_output, enc_slf_attn
