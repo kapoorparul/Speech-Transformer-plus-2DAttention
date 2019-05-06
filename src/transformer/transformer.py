@@ -146,8 +146,9 @@ if __name__=='__main__':
                       pe_maxlen=6000)
 
     t = Transformer(prenet,encoder,decoder)
-    padded_input = torch.rand(16,300,240)
-    padded_target = torch.randint(high=4233,size=(16,20))
+    t.cuda()
+    padded_input = torch.rand(16,300,240).cuda()
+    padded_target = torch.randint(high=4233,size=(16,20)).cuda()
     print(padded_target[0][:10])
     pred, gold = t(padded_input,None,padded_target)
     print(pred.size())

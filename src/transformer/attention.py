@@ -108,23 +108,23 @@ class TwoD_Attention_Layer(nn.Module):
 
         self.n = n
         self.c = c
-        self.convq = Conv2d(n,c,3,1)
-        self.convk = Conv2d(n,c,3,1)
-        self.convv = Conv2d(n,c,3,1)
-        self.conv = Conv2d(2*c,n,3,1)
-        self.bnq = nn.BatchNorm2d(c)
-        self.bnk = nn.BatchNorm2d(c)
-        self.bnv = nn.BatchNorm2d(c)
-        self.bn = nn.BatchNorm2d(n)
+        self.convq = Conv2d(n,c,3,1).cuda()
+        self.convk = Conv2d(n,c,3,1).cuda()
+        self.convv = Conv2d(n,c,3,1).cuda()
+        self.conv = Conv2d(2*c,n,3,1).cuda()
+        self.bnq = nn.BatchNorm2d(c).cuda()
+        self.bnk = nn.BatchNorm2d(c).cuda()
+        self.bnv = nn.BatchNorm2d(c).cuda()
+        self.bn = nn.BatchNorm2d(n).cuda()
         self.SA_time = ScaledDotProductAttention(temperature=1., attn_dropout=dropout)
         self.SA_freq = ScaledDotProductAttention(temperature=1., attn_dropout=dropout)
 
-        self.final_conv1 = Conv2d(n,c,3)
-        self.final_conv1_act = nn.ReLU()
-        self.final_conv2 = Conv2d(c,c,3)
-        self.bnf1 = nn.BatchNorm2d(c)
-        self.bnf2 = nn.BatchNorm2d(c)
-        self.act = nn.ReLU()
+        self.final_conv1 = Conv2d(n,c,3).cuda()
+        self.final_conv1_act = nn.ReLU().cuda()
+        self.final_conv2 = Conv2d(c,c,3).cuda()
+        self.bnf1 = nn.BatchNorm2d(c).cuda()
+        self.bnf2 = nn.BatchNorm2d(c).cuda()
+        self.act = nn.ReLU().cuda()
 
     def forward(self, inputs):
         '''
