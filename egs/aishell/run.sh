@@ -1,19 +1,19 @@
 #!/bin/bash
 set -ex
 # -- IMPORTANT
-data= # Modify to your aishell data path
+data=/home/ddy17/corpus_zn # Modify to your aishell data path
 stage=-1  # Modify to control start from witch stage
 # --
 
-ngpu=2         # number of gpus ("0" uses cpu, otherwise use gpu)
+ngpu=1         # number of gpus ("0" uses cpu, otherwise use gpu)
 nj=40
 
 dumpdir=dump   # directory to dump full features
 
 # Feature configuration
-do_delta=false
-LFR_m=4  # Low Frame Rate: number of frames to stack
-LFR_n=3  # Low Frame Rate: number of frames to skip
+do_delta=true
+LFR_m=1  # Low Frame Rate: number of frames to stack
+LFR_n=1  # Low Frame Rate: number of frames to skip
 
 # Network architecture
 # pre_net
@@ -144,72 +144,72 @@ else
 fi
 mkdir -p ${expdir}
 
-if [ ${stage} -le 3 ]; then
-    echo "stage 3: Network Training"
-    ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
-        train.py \
-        --train-json ${feat_train_dir}/data.json \
-        --valid-json ${feat_dev_dir}/data.json \
-        --dict ${dict} \
-        --LFR_m ${LFR_m} \
-        --LFR_n ${LFR_n} \
-        --d_input $d_input \
-        --n_layers_enc $n_layers_enc \
-        --n_head $n_head \
-        --d_k $d_k \
-        --d_v $d_v \
-        --d_model $d_model \
-        --d_inner $d_inner \
-        --dropout $dropout \
-        --pe_maxlen $pe_maxlen \
-        --d_word_vec $d_word_vec \
-        --n_layers_dec $n_layers_dec \
-        --tgt_emb_prj_weight_sharing $tgt_emb_prj_weight_sharing \
-        --label_smoothing ${label_smoothing} \
-        --epochs $epochs \
-        --shuffle $shuffle \
-        --batch-size $batch_size \
-        --batch_frames $batch_frames \
-        --maxlen-in $maxlen_in \
-        --maxlen-out $maxlen_out \
-        --k $k \
-        --warmup_steps $warmup_steps \
-        --save-folder ${expdir} \
-        --checkpoint $checkpoint \
-        --continue-from "$continue_from" \
-        --print-freq ${print_freq} \
-        --visdom $visdom \
-        --visdom_lr $visdom_lr \
-        --visdom_epoch $visdom_epoch \
-        --visdom-id "$visdom_id"
-fi
-
-lm_dir=lm
-if [ ${stage} -le 4 ];then
-    echo "stage 5: Language Model Training"
-    # get the train corpus and split it to single word
-    mkdir -p ${lm_dir}
-    awk '{$1="";print $0}' data/train/text.org | sed  's/^[ \t]*//g' | python local/split.py > ${lm_dir}/single_word.txt
-    cat ${data}/resource_aishell/lexicon.txt | grep -v 'SIL' | LC_ALL="zh_CN.UTF-8" awk '{if (length($1) <2 ) print $1}' | cat - <(echo "<s>"; echo "</s>"; echo "<SPOKEN_NOISE>" )> ${lm_dir}/wordlist
-    ngram-count -text ${lm_dir}/single_word.txt  -order 3 -limit-vocab -vocab ${lm_dir}/wordlist -unk -map-unk "<unk>" -kndiscount -interpolate -lm ${lm_dir}/lm.arpa
-
-fi
-
-if [ ${stage} -le 5 ]; then
-    echo "stage 5: Decoding"
-    decode_dir=${expdir}/decode_test_beam${beam_size}_nbest${nbest}_ml${decode_max_len}
-    mkdir -p ${decode_dir}
-    ${cuda_cmd} --gpu ${ngpu} ${decode_dir}/decode.log \
-        recognize.py \
-        --recog-json ${feat_test_dir}/data.json \
-        --dict $dict \
-        --result-label ${decode_dir}/data.json \
-        --model-path ${expdir}/final.pth.tar \
-        --beam-size $beam_size \
-        --nbest $nbest \
-        --decode-max-len $decode_max_len \
-	--lm-path ${lm_dir}/lm.arpa
-
-    # Compute CER
-    local/score_transformer.sh --nlsyms ${nlsyms} ${decode_dir} ${dict}
-fi
+#if [ ${stage} -le 3 ]; then
+#    echo "stage 3: Network Training"
+#    ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
+#        train.py \
+#        --train-json ${feat_train_dir}/data.json \
+#        --valid-json ${feat_dev_dir}/data.json \
+#        --dict ${dict} \
+#        --LFR_m ${LFR_m} \
+#        --LFR_n ${LFR_n} \
+#        --d_input $d_input \
+#        --n_layers_enc $n_layers_enc \
+#        --n_head $n_head \
+#        --d_k $d_k \
+#        --d_v $d_v \
+#        --d_model $d_model \
+#        --d_inner $d_inner \
+#        --dropout $dropout \
+#        --pe_maxlen $pe_maxlen \
+#        --d_word_vec $d_word_vec \
+#        --n_layers_dec $n_layers_dec \
+#        --tgt_emb_prj_weight_sharing $tgt_emb_prj_weight_sharing \
+#        --label_smoothing ${label_smoothing} \
+#        --epochs $epochs \
+#        --shuffle $shuffle \
+#        --batch-size $batch_size \
+#        --batch_frames $batch_frames \
+#        --maxlen-in $maxlen_in \
+#        --maxlen-out $maxlen_out \
+#        --k $k \
+#        --warmup_steps $warmup_steps \
+#        --save-folder ${expdir} \
+#        --checkpoint $checkpoint \
+#        --continue-from "$continue_from" \
+#        --print-freq ${print_freq} \
+#        --visdom $visdom \
+#        --visdom_lr $visdom_lr \
+#        --visdom_epoch $visdom_epoch \
+#        --visdom-id "$visdom_id"
+#fi
+#
+#lm_dir=lm
+#if [ ${stage} -le 4 ];then
+#    echo "stage 5: Language Model Training"
+#    # get the train corpus and split it to single word
+#    mkdir -p ${lm_dir}
+#    awk '{$1="";print $0}' data/train/text.org | sed  's/^[ \t]*//g' | python local/split.py > ${lm_dir}/single_word.txt
+#    cat ${data}/resource_aishell/lexicon.txt | grep -v 'SIL' | LC_ALL="zh_CN.UTF-8" awk '{if (length($1) <2 ) print $1}' | cat - <(echo "<s>"; echo "</s>"; echo "<SPOKEN_NOISE>" )> ${lm_dir}/wordlist
+#    ngram-count -text ${lm_dir}/single_word.txt  -order 3 -limit-vocab -vocab ${lm_dir}/wordlist -unk -map-unk "<unk>" -kndiscount -interpolate -lm ${lm_dir}/lm.arpa
+#
+#fi
+#
+#if [ ${stage} -le 5 ]; then
+#    echo "stage 5: Decoding"
+#    decode_dir=${expdir}/decode_test_beam${beam_size}_nbest${nbest}_ml${decode_max_len}
+#    mkdir -p ${decode_dir}
+#    ${cuda_cmd} --gpu ${ngpu} ${decode_dir}/decode.log \
+#        recognize.py \
+#        --recog-json ${feat_test_dir}/data.json \
+#        --dict $dict \
+#        --result-label ${decode_dir}/data.json \
+#        --model-path ${expdir}/final.pth.tar \
+#        --beam-size $beam_size \
+#        --nbest $nbest \
+#        --decode-max-len $decode_max_len \
+#	--lm-path ${lm_dir}/lm.arpa
+#
+#    # Compute CER
+#    local/score_transformer.sh --nlsyms ${nlsyms} ${decode_dir} ${dict}
+#fi
