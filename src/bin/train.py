@@ -2,7 +2,7 @@
 import argparse
 
 import torch,os
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 
 from data import AudioDataLoader, AudioDataset
 from decoder import Decoder
