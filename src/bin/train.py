@@ -3,7 +3,7 @@ import argparse
 
 import torch,os
 os.environ["CUDA_VISIBLE_DEVICES"] = "7"
-torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.benchmark = True
 from data import AudioDataLoader, AudioDataset
 from decoder import Decoder
 from encoder import Encoder
@@ -18,22 +18,22 @@ parser = argparse.ArgumentParser(
     "(Transformer framework).")
 # General config
 # Task related
-parser.add_argument('--train-json', type=str, default=None,
+parser.add_argument('--train-json', type=str, default='/home/ddy17/Speech-Transformer-plus-2DAttention/egs/aishell/dump/train/deltatrue/data.json',
                     help='Filename of train label data (json)')
-parser.add_argument('--valid-json', type=str, default=None,
+parser.add_argument('--valid-json', type=str, default='/home/ddy17/Speech-Transformer-plus-2DAttention/egs/aishell/dump/dev/deltatrue/data.json',
                     help='Filename of validation label data (json)')
-parser.add_argument('--dict', type=str, required=True,
+parser.add_argument('--dict', type=str, default='/home/ddy17/Speech-Transformer-plus-2DAttention/egs/aishell/data/lang_1char/train_chars.txt',
                     help='Dictionary which should include <unk> <sos> <eos>')
 # Low Frame Rate (stacking and skipping frames)
-parser.add_argument('--LFR_m', default=4, type=int,
+parser.add_argument('--LFR_m', default=1, type=int,
                     help='Low Frame Rate: number of frames to stack')
-parser.add_argument('--LFR_n', default=3, type=int,
+parser.add_argument('--LFR_n', default=1, type=int,
                     help='Low Frame Rate: number of frames to skip')
 # Network architecture
 # pre_net
 parser.add_argument('--d_mel', default=80,type=int, help='Mel bins')
 parser.add_argument('--num_M', default=2,type=int,help='num prenet blocks')
-parser.add_argument('--n', default=64,type=int, help='input channels')
+parser.add_argument('--n', default=3,type=int, help='input channels')
 parser.add_argument('--c', default=64,type=int, help='inner channels')
 # encoder
 # TODO: automatically infer input dim
@@ -67,14 +67,14 @@ parser.add_argument('--label_smoothing', default=0.1, type=float,
                     help='label smoothing')
 
 # Training config
-parser.add_argument('--epochs', default=30, type=int,
+parser.add_argument('--epochs', default=150, type=int,
                     help='Number of maximum epochs')
 # minibatch
-parser.add_argument('--shuffle', default=0, type=int,
+parser.add_argument('--shuffle', default=1, type=int,
                     help='reshuffle the data at every epoch')
 parser.add_argument('--batch-size', default=32, type=int,
                     help='Batch size')
-parser.add_argument('--batch_frames', default=0, type=int,
+parser.add_argument('--batch_frames', default=15000, type=int,
                     help='Batch frames. If this is not 0, batch size will make no sense')
 parser.add_argument('--maxlen-in', default=800, type=int, metavar='ML',
                     help='Batch size is reduced if the input sequence length > ML')
@@ -83,7 +83,7 @@ parser.add_argument('--maxlen-out', default=150, type=int, metavar='ML',
 parser.add_argument('--num-workers', default=4, type=int,
                     help='Number of workers to generate minibatch')
 # optimizer
-parser.add_argument('--k', default=1.0, type=float,
+parser.add_argument('--k', default=0.2, type=float,
                     help='tunable scalar multiply to learning rate')
 parser.add_argument('--warmup_steps', default=4000, type=int,
                     help='warmup steps')
@@ -99,11 +99,11 @@ parser.add_argument('--model-path', default='final.pth.tar',
 # logging
 parser.add_argument('--print-freq', default=10, type=int,
                     help='Frequency of printing training infomation')
-parser.add_argument('--visdom', dest='visdom', type=int, default=0,
+parser.add_argument('--visdom', dest='visdom', type=int, default=1,
                     help='Turn on visdom graphing')
-parser.add_argument('--visdom_lr', dest='visdom_lr', type=int, default=0,
+parser.add_argument('--visdom_lr', dest='visdom_lr', type=int, default=1,
                     help='Turn on visdom graphing learning rate')
-parser.add_argument('--visdom_epoch', dest='visdom_epoch', type=int, default=0,
+parser.add_argument('--visdom_epoch', dest='visdom_epoch', type=int, default=1,
                     help='Turn on visdom graphing each epoch')
 parser.add_argument('--visdom-id', default='Transformer training',
                     help='Identifier for visdom run')
