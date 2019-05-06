@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData">
+  <component name="PublishConfigData" showNewOnTargetInSync="false">
     <serverData>
+      <paths name="kaituoXu">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/Speech-Transformer-plus-2DAttention" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="sxc2">
         <serverdata>
           <mappings>

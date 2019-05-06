@@ -3,7 +3,7 @@ import argparse
 
 import torch,os
 os.environ["CUDA_VISIBLE_DEVICES"] = "7"
-
+torch.backends.cudnn.benchmark = False
 from data import AudioDataLoader, AudioDataset
 from decoder import Decoder
 from encoder import Encoder

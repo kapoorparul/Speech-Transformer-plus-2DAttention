@@ -203,8 +203,9 @@ class Pre_Net(nn.Module):
         inputs = inputs.view(B,T,3,-1).permute(0,2,1,3) #N x 3 x Ti x D_mel
 
         out = self.bn(self.downsample(inputs))
+        # print('downsample1.shape:', out.shape)
         out = self.bn2(self.downsample2(out))
-        # print('downsample.shape:', out.shape)
+        # print('downsample2.shape:', out.shape)
 
         for layer in self.TwoD_layers:
             out = layer(out)
