@@ -16,6 +16,11 @@ LFR_m=4  # Low Frame Rate: number of frames to stack
 LFR_n=3  # Low Frame Rate: number of frames to skip
 
 # Network architecture
+# pre_net
+num_M=2
+d_mel=80
+n=64
+c=64
 # Encoder
 d_input=80
 n_layers_enc=6

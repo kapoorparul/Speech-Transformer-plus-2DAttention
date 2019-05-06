@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import argparse
 
-import torch
+import torch,os
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 from data import AudioDataLoader, AudioDataset
 from decoder import Decoder
@@ -10,6 +11,7 @@ from transformer import Transformer
 from solver import Solver
 from utils import process_dict
 from optimizer import TransformerOptimizer
+from attention import Pre_Net
 
 parser = argparse.ArgumentParser(
     "End-to-End Automatic Speech Recognition Training "
@@ -28,6 +30,11 @@ parser.add_argument('--LFR_m', default=4, type=int,
 parser.add_argument('--LFR_n', default=3, type=int,
                     help='Low Frame Rate: number of frames to skip')
 # Network architecture
+# pre_net
+parser.add_argument('--d_mel', default=80,type=int, help='Mel bins')
+parser.add_argument('--num_M', default=2,type=int,help='num prenet blocks')
+parser.add_argument('--n', default=64,type=int, help='input channels')
+parser.add_argument('--c', default=64,type=int, help='inner channels')
 # encoder
 # TODO: automatically infer input dim
 parser.add_argument('--d_input', default=80, type=int,
@@ -123,6 +130,7 @@ def main(args):
     vocab_size = len(char_list)
     data = {'tr_loader': tr_loader, 'cv_loader': cv_loader}
     # model
+    prenet = Pre_Net(args.d_mel,args.d_model,args.num_M,args.n,args.c,args.dropout)
     encoder = Encoder(args.d_input * args.LFR_m, args.n_layers_enc, args.n_head,
                       args.d_k, args.d_v, args.d_model, args.d_inner,
                       dropout=args.dropout, pe_maxlen=args.pe_maxlen)
@@ -132,7 +140,7 @@ def main(args):
                       dropout=args.dropout,
                       tgt_emb_prj_weight_sharing=args.tgt_emb_prj_weight_sharing,
                       pe_maxlen=args.pe_maxlen)
-    model = Transformer(encoder, decoder)
+    model = Transformer(prenet,encoder, decoder)
     print(model)
     model.cuda()
     # optimizer

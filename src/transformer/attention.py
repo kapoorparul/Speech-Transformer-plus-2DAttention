@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
+from conv2d import Conv2d
 
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
@@ -44,6 +44,7 @@ class MultiHeadAttention(nn.Module):
         k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
         v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
 
+        # permute之后若想用view聚合维度必须使用contiguous
         q = q.permute(2, 0, 1, 3).contiguous().view(-1, len_q, d_k) # (n*b) x lq x dk
         k = k.permute(2, 0, 1, 3).contiguous().view(-1, len_k, d_k) # (n*b) x lk x dk
         v = v.permute(2, 0, 1, 3).contiguous().view(-1, len_v, d_v) # (n*b) x lv x dv
@@ -84,3 +85,137 @@ class ScaledDotProductAttention(nn.Module):
         output = torch.bmm(attn, v)
 
         return output, attn
+
+
+# https://github.com/pytorch/pytorch/issues/3867#issuecomment-407663012
+# only support stride == 1
+class Conv2dSame(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, bias=True, padding_layer=nn.ReflectionPad2d):
+        super().__init__()
+        ka = kernel_size // 2
+        kb = ka - 1 if kernel_size % 2 == 0 else ka
+        self.net = nn.Sequential(
+            padding_layer((ka,kb,ka,kb)),
+            nn.Conv2d(in_channels, out_channels, kernel_size, bias=bias)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+
+class TwoD_Attention_Layer(nn.Module):
+    def __init__(self, n = 64,c =64,dropout=0.1):
+        super(TwoD_Attention_Layer, self).__init__()
+
+        self.n = n
+        self.c = c
+        self.convq = Conv2dSame(n,c,3)
+        self.convk = Conv2dSame(n,c,3)
+        self.convv = Conv2dSame(n,c,3)
+        self.conv = Conv2dSame(2*c,n,3)
+        self.bnq = nn.BatchNorm2d(c)
+        self.bnk = nn.BatchNorm2d(c)
+        self.bnv = nn.BatchNorm2d(c)
+        self.bn = nn.BatchNorm2d(n)
+        self.SA_time = ScaledDotProductAttention(temperature=1., attn_dropout=dropout)
+        self.SA_freq = ScaledDotProductAttention(temperature=1., attn_dropout=dropout)
+
+        self.final_conv1 = Conv2dSame(n,c,3)
+        self.final_conv1_act = nn.ReLU()
+        self.final_conv2 = Conv2dSame(c,c,3)
+        self.bnf1 = nn.BatchNorm2d(c)
+        self.bnf2 = nn.BatchNorm2d(c)
+        self.act = nn.ReLU()
+
+    def forward(self, inputs):
+        '''
+        :param inputs: B*n*T*D
+        :return: B*n*T*D
+        '''
+        residual = inputs # B*T*D*n
+
+        q = self.bnq(self.convq(inputs)) # B*c*T*D
+        k = self.bnk(self.convk(inputs))
+        v = self.bnv(self.convv(inputs))
+        sz_b, c, len_q, d_q = q.size()
+        _, c, len_k, d_k = k.size()
+        _, c, len_v, d_v = v.size()
+
+        q_time = q.view(-1, len_q, d_q)
+        k_time = k.view(-1, len_k, d_k)
+        v_time = v.view(-1, len_v, d_v)
+
+        q_fre = q.permute(0, 1, 3, 2).contiguous().view(-1,d_q,len_q)
+        k_fre = k.permute(0, 1, 3, 2).contiguous().view(-1,d_k,len_k)
+        v_fre = v.permute(0, 1, 3, 2).contiguous().view(-1,d_v,len_v)
+
+        self.SA_time.temperature = np.power(d_q,0.5)
+        scaled_attention_time, attention_weights_time = self.SA_time(
+            q_time, k_time, v_time, None)  # (B*c)*T*D
+        self.SA_freq.temperature = np.power(len_q,0.5)
+        scaled_attention_fre, attention_weights_fre = self.SA_freq(
+            q_fre, k_fre, v_fre, None)  # (B*c)*D*T
+
+        scaled_attention_time = scaled_attention_time.view(sz_b, c, len_q, d_q)
+
+        scaled_attention_fre = scaled_attention_fre.view(sz_b, c, d_q ,len_q)
+        scaled_attention_fre = scaled_attention_fre.permute(0, 1, 3, 2)
+
+        out = torch.cat((scaled_attention_time,scaled_attention_fre),dim=1) # B*2c*T*D
+
+        out = self.bn(self.conv(out)) + residual  # B*n*T*D
+
+        final_out = self.bnf1(self.final_conv1_act(self.final_conv1(out)))
+        final_out = self.bnf2(self.final_conv2(final_out))
+
+        final_out = self.act(final_out + out)
+
+        return final_out
+
+
+class Pre_Net(nn.Module):
+    def __init__(self,d_mel, d_model=512, num_M=2, n=64, c=64,dropout=0.1):
+        super(Pre_Net, self).__init__()
+        self.d_mel = d_mel
+        self.num_M = num_M
+        self.d_model = d_model
+        self.n = n
+        self.c = c
+
+        self.downsample = Conv2d(n,c,3,2)
+        self.bn = nn.BatchNorm2d(c)
+        self.act = nn.ReLU()
+
+        self.downsample2 = Conv2d(c,c,3,2)
+        self.bn2 = nn.BatchNorm2d(c)
+        self.act2 = nn.ReLU()
+
+        self.TwoD_layers = [TwoD_Attention_Layer(c, c,dropout=dropout) for _ in range(num_M)]
+
+        self.linear = nn.Linear(d_mel*c//4, d_model)
+
+    def forward(self, inputs):
+        '''
+        :param inputs: B*n*T*D
+        :return: B*T*d_model
+        '''
+
+        out = self.bn(self.downsample(inputs))
+        out = self.bn2(self.downsample2(out))
+        # print('downsample.shape:', out.shape)
+
+        for i in range(self.num_M):
+            out = self.TwoD_layers[i](out)
+
+        B, c, T, D = out.size()
+
+        out = out.permute(0,2,3,1).contiguous().view(B, T, -1) # B*T*(D*c)
+
+        out = self.linear(out) # B*T*d_model
+
+        return out
+
+if __name__=='__main__':
+    inputs = torch.randn(16,3,100,80)
+    prenet = Pre_Net(80,n=3)
+    out = prenet(inputs)
+    print(out.size())

@@ -3,14 +3,16 @@ import torch.nn as nn
 
 from decoder import Decoder
 from encoder import Encoder
+from attention import Pre_Net
 
 
 class Transformer(nn.Module):
     """An encoder-decoder framework only includes attention.
     """
 
-    def __init__(self, encoder, decoder):
+    def __init__(self, prenet ,encoder, decoder):
         super(Transformer, self).__init__()
+        self.prenet = prenet
         self.encoder = encoder
         self.decoder = decoder
 
@@ -18,6 +20,7 @@ class Transformer(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
+    # TODO: 改变输入，增加channel维，去掉encoder和decoder第二个block的mask
     def forward(self, padded_input, input_lengths, padded_target):
         """
         Args:
@@ -56,6 +59,13 @@ class Transformer(nn.Module):
 
     @classmethod
     def load_model_from_package(cls, package):
+        pre_net = Pre_Net(package['d_mel'],
+                          package['d_model'],
+                          package['num_M'],
+                          package['n'],
+                          package['c'],
+                          dropout=package['dropout'],
+                        )
         encoder = Encoder(package['d_input'],
                           package['n_layers_enc'],
                           package['n_head'],
@@ -79,7 +89,7 @@ class Transformer(nn.Module):
                           tgt_emb_prj_weight_sharing=package['tgt_emb_prj_weight_sharing'],
                           pe_maxlen=package['pe_maxlen'],
                           )
-        model = cls(encoder, decoder)
+        model = cls(pre_net,encoder, decoder)
         model.load_state_dict(package['state_dict'])
         LFR_m, LFR_n = package['LFR_m'], package['LFR_n']
         return model, LFR_m, LFR_n
@@ -90,6 +100,11 @@ class Transformer(nn.Module):
             # Low Frame Rate Feature
             'LFR_m': LFR_m,
             'LFR_n': LFR_n,
+            # pre net
+            'num_M': model.prenet.num_M,
+            'd_mel': model.prenet.d_mel,
+            'n': model.prenet.n,
+            'c': model.prenet.c,
             # encoder
             'd_input': model.encoder.d_input,
             'n_layers_enc': model.encoder.n_layers,
