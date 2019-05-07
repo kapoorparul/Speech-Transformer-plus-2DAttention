@@ -7,7 +7,7 @@ ps: 2DAttention only used for feature extraction and down-sampling , more detail
 - pytorch 1.0 -
 
 ## Dataset
-- **aishell**: aishell is a corpus of approximately 700 hours of 16kHz chinese speech.
+- **aishell**: aishell is a corpus of approximately 150 hours of 16kHz chinese speech.
 
 ## Model
 - **model_architecture**
@@ -15,7 +15,7 @@ ps: 2DAttention only used for feature extraction and down-sampling , more detail
 
 ![model_architecture](egs/aishell/figures/ST.png)
 - **input**: The input acoustic features were 80-dimensional filterbanks extracted with a hop size of 10ms and a window size of 25ms, extended with temporal first and second order differences and per-speaker mean subtraction and variance normalization.
-- **output**: The output alphabet of target text consisted of 4233 chinese syllable classes, enclude unknown tokens, start-of-sequence tokens and end-of-sequence tokens.
+- **output**: The output alphabet of target text consisted of 4233 chinese syllable classes, include unknown tokens, start-of-sequence tokens and end-of-sequence tokens.
 - **2D-attention**: described in [1]
 
 ![2D-ATT](egs/aishell/figures/2D-attention.png)
