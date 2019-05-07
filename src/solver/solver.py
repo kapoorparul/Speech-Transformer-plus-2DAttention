@@ -76,6 +76,7 @@ class Solver(object):
             self.model.train()  # Turn on BatchNorm & Dropout
             start = time.time()
             tr_avg_loss = self._run_one_epoch(epoch)
+            torch.cuda.empty_cache()
             print('-' * 85)
             print('Train Summary | End of Epoch {0} | Time {1:.2f}s | '
                   'Train Loss {2:.3f}'.format(
@@ -92,11 +93,12 @@ class Solver(object):
                                                 cv_loss=self.cv_loss),
                            file_path)
                 print('Saving checkpoint model to %s' % file_path)
-
+            time.sleep(5)
             # Cross validation
             print('Cross validation...')
             self.model.eval()  # Turn off Batchnorm & Dropout
             val_loss = self._run_one_epoch(epoch, cross_valid=True)
+            torch.cuda.empty_cache()
             print('-' * 85)
             print('Valid Summary | End of Epoch {0} | Time {1:.2f}s | '
                   'Valid Loss {2:.3f}'.format(
@@ -186,5 +188,15 @@ class Solver(object):
                     else:
                         self.vis.line(X=x_axis, Y=y_axis, win=vis_window_epoch,
                                       update='replace')
+
+        del loss
+        del padded_input
+        del padded_target
+        del input_lengths
+        del pred
+        del gold
+        del n_correct
+        del non_pad_mask
+        del n_word
 
         return total_loss / (i + 1)
